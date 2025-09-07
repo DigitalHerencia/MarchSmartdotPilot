@@ -7,6 +7,8 @@ const PrefSchema = z.object({
   stepSizeYards: z.number().positive().max(5),
   fieldType: z.enum(["high-school", "college"]),
   notationStyle: z.enum(["yardline", "steps-off"]),
+  showId: z.string().optional(),
+  partId: z.string().optional(),
 })
 
 export async function getPreferences() {
