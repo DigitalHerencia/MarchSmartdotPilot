@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { yardsToSteps, stepsToYards, distanceYards, errorComponentsYards, errorInSteps, isOffTarget } from "./errorMetrics"
+import { yardsToSteps, stepsToYards, distanceYards, errorComponentsYards, errorInSteps, isOffTarget, errorComponentsSteps } from "./errorMetrics"
 
 describe("errorMetrics", () => {
   it("converts yards to steps and back", () => {
@@ -22,6 +22,9 @@ describe("errorMetrics", () => {
     const { yards, steps } = errorInSteps(current, target, 0.75)
     expect(yards).toBeCloseTo(Math.hypot(1, 2))
     expect(steps).toBeCloseTo(yards / 0.75)
+    const compsSteps = errorComponentsSteps(current, target, 0.75)
+    expect(compsSteps.longitudinalSteps).toBeCloseTo(comps.longitudinalYards / 0.75)
+    expect(compsSteps.lateralSteps).toBeCloseTo(comps.lateralYards / 0.75)
   })
 
   it("checks off-target threshold", () => {
