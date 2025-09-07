@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import type { MarchingRoute } from "../../schemas/routeSchema";
+import type { MarchingRoute } from "@/schemas/routeSchema";
 import { createRoute, listRoutes, deleteRoute } from "./routes";
 
 const baseRoute = (): MarchingRoute => ({
