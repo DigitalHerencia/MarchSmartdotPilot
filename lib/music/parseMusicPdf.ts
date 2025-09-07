@@ -36,7 +36,7 @@ export async function parseMusicPdf(file: File): Promise<ParsedMusic> {
   const beatValue = timeMatch ? Number(timeMatch[2]) : 4;
   const totalMeasures = measureMatch
     ? Number(measureMatch[1])
-    : phrases.length
+    : phrases.length > 0
     ? Math.max(...phrases.map((p) => p.end))
     : 0;
   const measures = Array.from({ length: totalMeasures }, (_, idx) => ({
