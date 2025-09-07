@@ -1,38 +1,33 @@
-"use client";
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Users, Route, Music, Target, AlertCircle } from "lucide-react";
-import Link from "next/link";
-import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { getPreferences } from "@/lib/actions/preferences";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import FieldView from "../components/field-view";
-import VisualCueLayer from "@/features/performance/VisualCueLayer";
-import SheetOverlay from "@/features/performance/SheetOverlay";
-import MusicPlayer from "../components/music-player";
-import Metronome from "../components/metronome";
-import RouteManager from "../components/route-manager";
-import RouteViewer from "@/features/routes/RouteViewer";
-import RouteList from "@/features/routes/RouteList";
-import PracticeHUD from "@/features/practice/PracticeHUD";
-import MusicUpload from "@/features/practice/MusicUpload";
-import PhrasingSuggest from "@/features/practice/PhrasingSuggest";
-import StudentTracker from "../components/student-tracker";
-import { useGPSTracking } from "../hooks/use-gps-tracking";
-import { useAudioContext } from "../hooks/use-audio-context";
-import type { Student, MarchingRoute, Position } from "../types/marching-band";
-import type { AffineTransform } from "@/features/field/utils/fieldMath";
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Users, Route, Music, Target, AlertCircle } from "lucide-react"
+import Link from "next/link"
+import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs"
+import { getPreferences } from "@/lib/actions/preferences"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
+import FieldView from "../components/field-view"
+import VisualCueLayer from "@/features/performance/VisualCueLayer"
+import SheetOverlay from "@/features/performance/SheetOverlay"
+import MusicPlayer from "../components/music-player"
+import Metronome from "../components/metronome"
+import RouteManager from "../components/route-manager"
+import RouteViewer from "@/features/routes/RouteViewer"
+import PracticeHUD from "@/features/practice/PracticeHUD"
+import StepPlayback from "@/features/practice/StepPlayback"
+import MusicUpload from "@/features/practice/MusicUpload"
+import PhrasingSuggest from "@/features/practice/PhrasingSuggest"
+import StudentTracker from "../components/student-tracker"
+import { useGPSTracking } from "../hooks/use-gps-tracking"
+import { useAudioContext } from "../hooks/use-audio-context"
+import type { Student, MarchingRoute, Position } from "../types/marching-band"
+import type { AffineTransform } from "@/features/field/utils/fieldMath"
 
 export default function MarchingBandApp() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -297,21 +292,24 @@ export default function MarchingBandApp() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <PracticeHUD
-                      bpm={bpm}
-                      stepSizeYards={stepSizeYards}
-                      current={students.find((s) => s.id === currentStudentId)?.position || null}
-                      route={currentRoute}
-                      previewIndex={previewIndex}
-                    />
-                  </div>
-                  <div className="mt-4">
-                    <RouteViewer
-                      route={currentRoute}
-                      value={previewIndex}
-                      onChange={setPreviewIndex}
-                    />
-                  </div>
+                  <PracticeHUD
+                    bpm={bpm}
+                    stepSizeYards={stepSizeYards}
+                    current={students.find((s) => s.id === currentStudentId)?.position || null}
+                    route={currentRoute}
+                    previewIndex={previewIndex}
+                  />
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-4">
+                  <StepPlayback
+                    route={currentRoute}
+                    index={previewIndex}
+                    onIndexChange={setPreviewIndex}
+                    bpm={bpm}
+                    audioContext={audioContext}
+                  />
+                  <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+                </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -446,12 +444,15 @@ export default function MarchingBandApp() {
                     previewIndex={previewIndex}
                   />
                 </div>
-                <div className="mt-4">
-                  <RouteViewer
+                <div className="mt-4 flex items-center justify-between gap-4">
+                  <StepPlayback
                     route={currentRoute}
-                    value={previewIndex}
-                    onChange={setPreviewIndex}
+                    index={previewIndex}
+                    onIndexChange={setPreviewIndex}
+                    bpm={bpm}
+                    audioContext={audioContext}
                   />
+                  <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
                 </div>
               </CardContent>
             </Card>
