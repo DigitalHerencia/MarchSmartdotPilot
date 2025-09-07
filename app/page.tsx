@@ -19,6 +19,7 @@ import Metronome from "../components/metronome"
 import RouteManager from "../components/route-manager"
 import RouteViewer from "@/features/routes/RouteViewer"
 import PracticeHUD from "@/features/practice/PracticeHUD"
+import StepPlayback from "@/features/practice/StepPlayback"
 import MusicUpload from "@/features/practice/MusicUpload"
 import PhrasingSuggest from "@/features/practice/PhrasingSuggest"
 import StudentTracker from "../components/student-tracker"
@@ -268,17 +269,24 @@ export default function MarchingBandApp() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <PracticeHUD
-                      bpm={bpm}
-                      stepSizeYards={stepSizeYards}
-                      current={students.find((s) => s.id === currentStudentId)?.position || null}
-                      route={currentRoute}
-                      previewIndex={previewIndex}
-                    />
-                  </div>
-                  <div className="mt-4">
-                    <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
-                  </div>
+                  <PracticeHUD
+                    bpm={bpm}
+                    stepSizeYards={stepSizeYards}
+                    current={students.find((s) => s.id === currentStudentId)?.position || null}
+                    route={currentRoute}
+                    previewIndex={previewIndex}
+                  />
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-4">
+                  <StepPlayback
+                    route={currentRoute}
+                    index={previewIndex}
+                    onIndexChange={setPreviewIndex}
+                    bpm={bpm}
+                    audioContext={audioContext}
+                  />
+                  <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+                </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -393,7 +401,14 @@ export default function MarchingBandApp() {
                     previewIndex={previewIndex}
                   />
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 flex items-center justify-between gap-4">
+                  <StepPlayback
+                    route={currentRoute}
+                    index={previewIndex}
+                    onIndexChange={setPreviewIndex}
+                    bpm={bpm}
+                    audioContext={audioContext}
+                  />
                   <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
                 </div>
               </CardContent>

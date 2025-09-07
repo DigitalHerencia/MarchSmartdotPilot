@@ -39,6 +39,14 @@ export function errorInSteps(current: Vec2, target: Vec2, stepSizeYards: number)
   return { yards: dist, steps }
 }
 
+export function errorComponentsSteps(current: Vec2, target: Vec2, stepSizeYards: number) {
+  const { lateralYards, longitudinalYards } = errorComponentsYards(current, target)
+  return {
+    lateralSteps: yardsToSteps(lateralYards, stepSizeYards),
+    longitudinalSteps: yardsToSteps(longitudinalYards, stepSizeYards),
+  }
+}
+
 export function isOffTarget(current: Vec2, target: Vec2, stepSizeYards: number, thresholdSteps = 0.5) {
   const { steps } = errorInSteps(current, target, stepSizeYards)
   return steps > thresholdSteps
