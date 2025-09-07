@@ -1,15 +1,25 @@
-import { ParsedMusicSchema, type ParsedMusic } from "@/schemas/musicSchema"
+import { DOMParser as LinkeDOMParser } from "linkedom"
+import {
+  ParsedMusicSchema,
+  type ParsedMusic,
+  type Phrase,
+  type TempoChange,
+} from "@/schemas/musicSchema"
 
 export async function parseMusicXml(file: File): Promise<ParsedMusic> {
   const text = await file.text()
-  const parser = new DOMParser()
+  const ParserImpl: typeof DOMParser =
+    typeof DOMParser !== "undefined"
+      ? DOMParser
+      : (LinkeDOMParser as unknown as typeof DOMParser)
+  const parser = new ParserImpl()
   const doc = parser.parseFromString(text, "application/xml")
   // Basic error check
   const parserError = doc.querySelector("parsererror")
   if (parserError) throw new Error("Invalid MusicXML")
 
   const title = doc.querySelector("work > work-title")?.textContent || undefined
-  // Find first tempo (sound tempo or direction metronome)
+  // Find tempo changes per measure and default tempo
   let tempo = 120
   const soundTempo = doc.querySelector("sound[tempo]")?.getAttribute("tempo")
   if (soundTempo) tempo = Number(soundTempo) || tempo
@@ -21,7 +31,23 @@ export async function parseMusicXml(file: File): Promise<ParsedMusic> {
   const beatType = Number(doc.querySelector("attributes time beat-type")?.textContent || 4)
 
   // Measures and durations: for a minimal approach, count beats per measure based on divisions and note durations
-  const measuresNodes = Array.from(doc.querySelectorAll("score-partwise > part > measure"))
+  const measuresNodes = Array.from(
+    doc.querySelectorAll("score-partwise > part > measure"),
+  )
+  const tempoChanges: TempoChange[] = []
+  measuresNodes.forEach((m, idx) => {
+    let t: number | undefined
+    const sound = m.querySelector("direction sound[tempo]")
+    if (sound) t = Number(sound.getAttribute("tempo") || "")
+    const perMin = m.querySelector(
+      "direction metronome per-minute",
+    )?.textContent
+    if (perMin) t = Number(perMin)
+    if (t) tempoChanges.push({ measure: idx + 1, bpm: t })
+  })
+  if (tempoChanges.length) tempo = tempoChanges[0].bpm
+  else tempoChanges.push({ measure: 1, bpm: tempo })
+
   const divisions = Number(doc.querySelector("divisions")?.textContent || 1)
   const measures = measuresNodes.map((m, idx) => {
     let ticks = 0
@@ -34,6 +60,31 @@ export async function parseMusicXml(file: File): Promise<ParsedMusic> {
     return { number: idx + 1, durationBeats: beatsInMeasure }
   })
 
-  const parsed = { title, tempo, timeSignature: { beats, beatValue: beatType }, measures }
+  // Phrase detection: end phrase on double/final barlines
+  const phraseEnds = measuresNodes.map((m) => {
+    const bar = m.querySelector(
+      "barline[location='right'] > bar-style",
+    )?.textContent
+    return bar ? /light-heavy|final|double/i.test(bar) : false
+  })
+  const phrases: Phrase[] = []
+  let start = 1
+  phraseEnds.forEach((endFlag, idx) => {
+    if (endFlag) {
+      phrases.push({ start, end: idx + 1 })
+      start = idx + 2
+    }
+  })
+  if (start <= measuresNodes.length)
+    phrases.push({ start, end: measuresNodes.length })
+
+  const parsed = {
+    title,
+    tempo,
+    timeSignature: { beats, beatValue: beatType },
+    measures,
+    phrases,
+    tempoChanges,
+  }
   return ParsedMusicSchema.parse(parsed)
 }
