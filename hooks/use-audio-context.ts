@@ -9,7 +9,12 @@ export function useAudioContext() {
   useEffect(() => {
     const initAudioContext = async () => {
       try {
-        const context = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const context = new (
+          window.AudioContext ||
+          (window as typeof window & {
+            webkitAudioContext: typeof AudioContext
+          }).webkitAudioContext
+        )()
 
         // Resume context if suspended (required by some browsers)
         if (context.state === "suspended") {
