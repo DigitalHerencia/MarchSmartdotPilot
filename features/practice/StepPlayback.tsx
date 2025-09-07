@@ -66,7 +66,9 @@ export default function StepPlayback({ route, index, onIndexChange, bpm, audioCo
   const handleStart = () => {
     if (!route || route.waypoints.length === 0) return
     if (audioContext && audioContext.state === "suspended") {
-      audioContext.resume().catch(() => {})
+      audioContext.resume().catch((err) => {
+        console.error("Failed to resume AudioContext:", err);
+      });
     }
     setIsPlaying(true)
     playClick()
