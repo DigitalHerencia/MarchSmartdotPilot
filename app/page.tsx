@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -29,41 +30,44 @@ import type { Student, MarchingRoute, Position } from "../types/marching-band"
 import type { AffineTransform } from "@/features/field/utils/fieldMath"
 
 export default function MarchingBandApp() {
-  const [students, setStudents] = useState<Student[]>([])
-  const [currentRoute, setCurrentRoute] = useState<MarchingRoute | null>(null)
-  const [isTracking, setIsTracking] = useState(false)
-  const [currentStudentId, setCurrentStudentId] = useState<string>("")
-  const [activeTab, setActiveTab] = useState("field")
-  const [isCalibrating, setIsCalibrating] = useState(false)
-  const [calibrationProgress, setCalibrationProgress] = useState(0)
-  const [calibrationSamples, setCalibrationSamples] = useState<number[]>([])
-  const [calibratedAccuracy, setCalibratedAccuracy] = useState<number | null>(null)
-  const [previewIndex, setPreviewIndex] = useState(0)
-  const [transform, setTransform] = useState<AffineTransform | null>(null)
-  const [bpm] = useState(120)
-  const [stepSizeYards, setStepSizeYards] = useState(0.75) // default ~27 inches
-  const [fieldType, setFieldType] = useState<"high-school" | "college">("high-school")
-  const [notationStyle, setNotationStyle] = useState<"yardline" | "steps-off">("yardline")
+  const [students, setStudents] = useState<Student[]>([]);
+  const [currentRoute, setCurrentRoute] = useState<MarchingRoute | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const [currentStudentId, setCurrentStudentId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("field");
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [calibrationProgress, setCalibrationProgress] = useState(0);
+  const [calibrationSamples, setCalibrationSamples] = useState<number[]>([]);
+  const [calibratedAccuracy, setCalibratedAccuracy] = useState<number | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [transform, setTransform] = useState<AffineTransform | null>(null);
+  const [bpm] = useState(120);
+  const [stepSizeYards, setStepSizeYards] = useState(0.75); // default ~27 inches
+  const [fieldType, setFieldType] = useState<"high-school" | "college">("high-school");
+  const [notationStyle, setNotationStyle] = useState<"yardline" | "steps-off">("yardline");
 
   // Get GPS tracking data from the hook
-  const gpsTracking = useGPSTracking()
-  const { position, accuracy, isLocationEnabled, requestLocation, startTracking, stopTracking } = gpsTracking
+  const gpsTracking = useGPSTracking();
+  const { position, accuracy, isLocationEnabled, requestLocation, startTracking, stopTracking } =
+    gpsTracking;
 
-  const { audioContext, isAudioReady } = useAudioContext()
+  const { audioContext, isAudioReady } = useAudioContext();
 
   useEffect(() => {
     // Load user preferences if signed in; silently ignore errors
-    ;(async () => {
+    (async () => {
       try {
-        const pref = await getPreferences()
+        const pref = await getPreferences();
         if (pref) {
-          if (typeof pref.stepSizeYards === "number") setStepSizeYards(pref.stepSizeYards)
-          if (pref.fieldType === "high-school" || pref.fieldType === "college") setFieldType(pref.fieldType)
-          if (pref.notationStyle === "yardline" || pref.notationStyle === "steps-off") setNotationStyle(pref.notationStyle)
+          if (typeof pref.stepSizeYards === "number") setStepSizeYards(pref.stepSizeYards);
+          if (pref.fieldType === "high-school" || pref.fieldType === "college")
+            setFieldType(pref.fieldType);
+          if (pref.notationStyle === "yardline" || pref.notationStyle === "steps-off")
+            setNotationStyle(pref.notationStyle);
         }
       } catch {}
-    })()
-  }, [])
+    })();
+  }, []);
 
   useEffect(() => {
     // Initialize with sample student data
@@ -92,114 +96,117 @@ export default function MarchingBandApp() {
         position: { x: 70, y: 33, timestamp: Date.now() },
         isActive: true,
       },
-    ]
-    setStudents(sampleStudents)
-    setCurrentStudentId("1")
-  }, [])
+    ];
+    setStudents(sampleStudents);
+    setCurrentStudentId("1");
+  }, []);
 
   useEffect(() => {
     if (position && currentStudentId) {
-      const fieldPosition = convertGPSToFieldCoordinates(position)
+      const fieldPosition = convertGPSToFieldCoordinates(position);
       setStudents((prev) =>
-        prev.map((student) => (student.id === currentStudentId ? { ...student, position: fieldPosition } : student)),
-      )
+        prev.map((student) =>
+          student.id === currentStudentId ? { ...student, position: fieldPosition } : student,
+        ),
+      );
     }
-  }, [position, currentStudentId])
+  }, [position, currentStudentId]);
 
   useEffect(() => {
     // Handle calibration process
     if (isCalibrating && position && accuracy) {
       // Add current accuracy to samples
-      setCalibrationSamples((prev) => [...prev, accuracy])
+      setCalibrationSamples((prev) => [...prev, accuracy]);
 
       // Update progress
-      const progress = Math.min(100, (calibrationSamples.length / 10) * 100)
-      setCalibrationProgress(progress)
+      const progress = Math.min(100, (calibrationSamples.length / 10) * 100);
+      setCalibrationProgress(progress);
 
       // If we have enough samples, complete calibration
       if (calibrationSamples.length >= 10) {
         // Calculate average accuracy from samples
-        const avgAccuracy = calibrationSamples.reduce((sum, val) => sum + val, 0) / calibrationSamples.length
-        setCalibratedAccuracy(avgAccuracy)
-        setIsCalibrating(false)
+        const avgAccuracy =
+          calibrationSamples.reduce((sum, val) => sum + val, 0) / calibrationSamples.length;
+        setCalibratedAccuracy(avgAccuracy);
+        setIsCalibrating(false);
       }
     }
-  }, [isCalibrating, position, accuracy, calibrationSamples])
+  }, [isCalibrating, position, accuracy, calibrationSamples]);
 
   const convertGPSToFieldCoordinates = (gpsPos: GeolocationPosition): Position => {
-    const lat = gpsPos.coords.latitude
-    const lon = gpsPos.coords.longitude
-    let x: number
-    let y: number
+    const lat = gpsPos.coords.latitude;
+    const lon = gpsPos.coords.longitude;
+    let x: number;
+    let y: number;
     if (transform) {
       // Use calibrated affine transform
       const f = {
         x: transform.m[0] * lat + transform.m[1] * lon + transform.m[2],
         y: transform.m[3] * lat + transform.m[4] * lon + transform.m[5],
-      }
-      x = f.x
-      y = f.y
+      };
+      x = f.x;
+      y = f.y;
     } else {
       // Fallback naive mapping
-      x = (lon + 180) * (120 / 360)
-      y = (lat + 90) * (53.33 / 180)
+      x = (lon + 180) * (120 / 360);
+      y = (lat + 90) * (53.33 / 180);
     }
     return {
       x: Math.max(0, Math.min(120, x)),
       y: Math.max(0, Math.min(53.33, y)),
       timestamp: Date.now(),
-    }
-  }
+    };
+  };
 
   const handleStartTracking = async () => {
     if (!isLocationEnabled) {
-      await requestLocation()
+      await requestLocation();
     }
     // Start the GPS watcher/worker loop from the hook
-    startTracking()
-    setIsTracking(true)
-  }
+    startTracking();
+    setIsTracking(true);
+  };
 
   const handleStopTracking = () => {
     // Stop the GPS watcher/worker loop from the hook
-    stopTracking()
-    setIsTracking(false)
-  }
+    stopTracking();
+    setIsTracking(false);
+  };
 
   const startCalibration = async () => {
     if (!isLocationEnabled) {
-      await requestLocation()
+      await requestLocation();
     }
-    setCalibrationSamples([])
-    setCalibrationProgress(0)
-    setIsCalibrating(true)
-  }
+    setCalibrationSamples([]);
+    setCalibrationProgress(0);
+    setIsCalibrating(true);
+  };
 
   const cancelCalibration = () => {
-    setIsCalibrating(false)
-    setCalibrationSamples([])
-    setCalibrationProgress(0)
-  }
+    setIsCalibrating(false);
+    setCalibrationSamples([]);
+    setCalibrationProgress(0);
+  };
 
   const getAccuracyDescription = (accuracy: number | undefined | null) => {
-    if (accuracy === null || accuracy === undefined) return "Unknown"
-    if (accuracy < 3) return "High"
-    if (accuracy < 10) return "Medium"
-    return "Low"
-  }
+    if (accuracy === null || accuracy === undefined) return "Unknown";
+    if (accuracy < 3) return "High";
+    if (accuracy < 10) return "Medium";
+    return "Low";
+  };
 
   const getAccuracyColor = (accuracy: number | undefined | null) => {
-    if (accuracy === null || accuracy === undefined) return "text-gray-600"
-    if (accuracy < 3) return "text-green-600"
-    if (accuracy < 10) return "text-amber-600"
-    return "text-red-600"
-  }
+    if (accuracy === null || accuracy === undefined) return "text-gray-600";
+    if (accuracy < 3) return "text-green-600";
+    if (accuracy < 10) return "text-amber-600";
+    return "text-red-600";
+  };
 
   return (
     <div className="min-h-screen">
       <div className="container-app py-6 space-y-6">
         {/* Mobile Navigation */}
-  <div className="lg:hidden anchor-offset" id="field">
+        <div className="lg:hidden anchor-offset" id="field">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="tabs-pills grid w-full grid-cols-4 h-12">
               <TabsTrigger value="field" className="flex flex-col gap-1 text-xs">
@@ -226,11 +233,21 @@ export default function MarchingBandApp() {
                   <CardTitle className="flex items-center justify-between text-lg">
                     Football Field
                     <div className="flex gap-2">
-                      <Button onClick={handleStartTracking} disabled={isTracking} size="sm" className="h-10 px-4">
+                      <Button
+                        onClick={handleStartTracking}
+                        disabled={isTracking}
+                        size="sm"
+                        className="h-10 px-4"
+                      >
                         {isTracking ? "Tracking" : "Start GPS"}
                       </Button>
                       {isTracking && (
-                        <Button onClick={handleStopTracking} variant="outline" size="sm" className="h-10 px-4">
+                        <Button
+                          onClick={handleStopTracking}
+                          variant="outline"
+                          size="sm"
+                          className="h-10 px-4"
+                        >
                           Stop
                         </Button>
                       )}
@@ -240,21 +257,27 @@ export default function MarchingBandApp() {
                 <CardContent>
                   <div className="relative">
                     <FieldView
-                    students={students}
-                    route={currentRoute}
-                    isTracking={isTracking}
-                    accuracy={accuracy || undefined}
-                    onRouteChange={setCurrentRoute}
-                    previewIndex={previewIndex}
-                    currentGeo={position ? { lat: position.coords.latitude, lon: position.coords.longitude } : null}
-                    currentFieldPos={students.find((s) => s.id === currentStudentId)?.position || null}
-                    stepSizeYards={stepSizeYards}
-                    fieldType={fieldType}
-                    notationStyle={notationStyle}
-                    onCalibrated={(t, rms) => {
-                      setTransform(t)
-                      // Optionally show feedback to user later using rms
-                    }}
+                      students={students}
+                      route={currentRoute}
+                      isTracking={isTracking}
+                      accuracy={accuracy || undefined}
+                      onRouteChange={setCurrentRoute}
+                      previewIndex={previewIndex}
+                      currentGeo={
+                        position
+                          ? { lat: position.coords.latitude, lon: position.coords.longitude }
+                          : null
+                      }
+                      currentFieldPos={
+                        students.find((s) => s.id === currentStudentId)?.position || null
+                      }
+                      stepSizeYards={stepSizeYards}
+                      fieldType={fieldType}
+                      notationStyle={notationStyle}
+                      onCalibrated={(t, rms) => {
+                        setTransform(t);
+                        // Optionally show feedback to user later using rms
+                      }}
                     />
                     {/* Performance overlays */}
                     <div className="absolute inset-0">
@@ -300,6 +323,7 @@ export default function MarchingBandApp() {
 
             <TabsContent value="routes" className="mt-4 anchor-offset" id="routes">
               <div className="space-y-4">
+                <RouteList />
                 <RouteManager currentRoute={currentRoute} onRouteChange={setCurrentRoute} />
                 <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
               </div>
@@ -322,7 +346,11 @@ export default function MarchingBandApp() {
           {accuracy && (
             <Card
               className={`border-l-4 ${
-                accuracy < 3 ? "border-l-green-500" : accuracy < 10 ? "border-l-amber-500" : "border-l-red-500"
+                accuracy < 3
+                  ? "border-l-green-500"
+                  : accuracy < 10
+                    ? "border-l-amber-500"
+                    : "border-l-red-500"
               } card-surface elevated`}
             >
               <CardContent className="p-4">
@@ -336,7 +364,10 @@ export default function MarchingBandApp() {
                   </Button>
                 </div>
                 <div className="mt-2 flex items-center gap-2">
-                  <Progress value={(1 - Math.min(accuracy, 20) / 20) * 100} className="h-2 flex-1" />
+                  <Progress
+                    value={(1 - Math.min(accuracy, 20) / 20) * 100}
+                    className="h-2 flex-1"
+                  />
                   <span className={`text-sm font-medium ${getAccuracyColor(accuracy)}`}>
                     {getAccuracyDescription(accuracy)} (±{accuracy.toFixed(1)}m)
                   </span>
@@ -347,7 +378,7 @@ export default function MarchingBandApp() {
         </div>
 
         {/* Desktop Layout */}
-  <div className="hidden lg:grid lg:grid-cols-3 gap-6" id="field-desktop">
+        <div className="hidden lg:grid lg:grid-cols-3 gap-6" id="field-desktop">
           {/* Main Field View */}
           <div className="lg:col-span-2">
             <Card className="card-surface elevated">
@@ -371,26 +402,38 @@ export default function MarchingBandApp() {
                   </div>
                 </CardTitle>
               </CardHeader>
-                <CardContent>
+              <CardContent>
                 <div className="relative">
-                <FieldView
-                  students={students}
-                  route={currentRoute}
-                  isTracking={isTracking}
-                  accuracy={accuracy || undefined}
-                  onRouteChange={setCurrentRoute}
-                  previewIndex={previewIndex}
-                  currentGeo={position ? { lat: position.coords.latitude, lon: position.coords.longitude } : null}
-                  currentFieldPos={students.find((s) => s.id === currentStudentId)?.position || null}
-                  stepSizeYards={stepSizeYards}
-                  fieldType={fieldType}
-                  notationStyle={notationStyle}
-                  onCalibrated={(t) => setTransform(t)}
-                />
-                <div className="absolute inset-0">
-                  <VisualCueLayer width={800} height={400} bpm={bpm} audioContext={audioContext} visible={true} />
-                  <SheetOverlay text={`Next: Step ${previewIndex + 1}`} visible={true} />
-                </div>
+                  <FieldView
+                    students={students}
+                    route={currentRoute}
+                    isTracking={isTracking}
+                    accuracy={accuracy || undefined}
+                    onRouteChange={setCurrentRoute}
+                    previewIndex={previewIndex}
+                    currentGeo={
+                      position
+                        ? { lat: position.coords.latitude, lon: position.coords.longitude }
+                        : null
+                    }
+                    currentFieldPos={
+                      students.find((s) => s.id === currentStudentId)?.position || null
+                    }
+                    stepSizeYards={stepSizeYards}
+                    fieldType={fieldType}
+                    notationStyle={notationStyle}
+                    onCalibrated={(t) => setTransform(t)}
+                  />
+                  <div className="absolute inset-0">
+                    <VisualCueLayer
+                      width={800}
+                      height={400}
+                      bpm={bpm}
+                      audioContext={audioContext}
+                      visible={true}
+                    />
+                    <SheetOverlay text={`Next: Step ${previewIndex + 1}`} visible={true} />
+                  </div>
                 </div>
                 <div className="mt-4">
                   <PracticeHUD
@@ -440,7 +483,11 @@ export default function MarchingBandApp() {
               <TabsContent value="routes" className="mt-4">
                 <div className="space-y-4">
                   <RouteManager currentRoute={currentRoute} onRouteChange={setCurrentRoute} />
-                  <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+                  <RouteViewer
+                    route={currentRoute}
+                    value={previewIndex}
+                    onChange={setPreviewIndex}
+                  />
                 </div>
               </TabsContent>
 
@@ -479,7 +526,9 @@ export default function MarchingBandApp() {
                     transition: "transform 0.5s ease",
                   }}
                 ></div>
-                <div className="text-2xl font-bold text-blue-700">{Math.round(calibrationProgress)}%</div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {Math.round(calibrationProgress)}%
+                </div>
               </div>
             </div>
 
@@ -500,7 +549,9 @@ export default function MarchingBandApp() {
                 <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-600">Accuracy:</span>
-                    <div className={`font-medium ${getAccuracyColor(accuracy)}`}>±{accuracy.toFixed(1)}m</div>
+                    <div className={`font-medium ${getAccuracyColor(accuracy)}`}>
+                      ±{accuracy.toFixed(1)}m
+                    </div>
                   </div>
                   <div>
                     <span className="text-gray-600">Quality:</span>
@@ -531,7 +582,9 @@ export default function MarchingBandApp() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>GPS Calibration Complete</DialogTitle>
-            <DialogDescription>We&apos;ve analyzed your GPS signal quality based on multiple samples.</DialogDescription>
+            <DialogDescription>
+              We&apos;ve analyzed your GPS signal quality based on multiple samples.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
@@ -556,18 +609,18 @@ export default function MarchingBandApp() {
               <h4 className="font-medium">What this means:</h4>
               {calibratedAccuracy && calibratedAccuracy < 3 ? (
                 <p className="text-sm text-gray-600">
-                  Your GPS accuracy is excellent! You can expect precise position tracking suitable for
-                  competition-level marching.
+                  Your GPS accuracy is excellent! You can expect precise position tracking suitable
+                  for competition-level marching.
                 </p>
               ) : calibratedAccuracy && calibratedAccuracy < 10 ? (
                 <p className="text-sm text-gray-600">
-                  Your GPS accuracy is acceptable for practice sessions. For better precision, try moving to a more open
-                  area.
+                  Your GPS accuracy is acceptable for practice sessions. For better precision, try
+                  moving to a more open area.
                 </p>
               ) : (
                 <p className="text-sm text-gray-600">
-                  Your GPS accuracy is limited. Consider moving to an open area away from buildings or using an external
-                  GPS receiver for better results.
+                  Your GPS accuracy is limited. Consider moving to an open area away from buildings
+                  or using an external GPS receiver for better results.
                 </p>
               )}
             </div>
@@ -575,9 +628,9 @@ export default function MarchingBandApp() {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-900 mb-2">Field Position Impact</h4>
               <p className="text-sm text-blue-800">
-                With your current GPS accuracy of ±{calibratedAccuracy?.toFixed(1) || "?"}m, expect field positions to
-                be accurate within approximately ±{calibratedAccuracy ? (calibratedAccuracy * 1.09361).toFixed(1) : "?"}{" "}
-                yards.
+                With your current GPS accuracy of ±{calibratedAccuracy?.toFixed(1) || "?"}m, expect
+                field positions to be accurate within approximately ±
+                {calibratedAccuracy ? (calibratedAccuracy * 1.09361).toFixed(1) : "?"} yards.
               </p>
             </div>
           </div>
@@ -588,5 +641,5 @@ export default function MarchingBandApp() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
