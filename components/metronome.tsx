@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
@@ -19,105 +19,180 @@ export default function Metronome({ audioContext, isReady }: MetronomeProps) {
   const [beats, setBeats] = useState(4)
   const [currentBeat, setCurrentBeat] = useState(0)
   const [volume, setVolume] = useState([0.5])
-  const [countIn, setCountIn] = useState(false)
+  const [countIn] = useState(false)
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const gainNodeRef = useRef<GainNode | null>(null)
+  // Audio graph
+  const masterGainRef = useRef<GainNode | null>(null)
+
+  // Scheduler state
+  const lookaheadRef = useRef<number>(25) // ms between scheduler ticks
+  const scheduleAheadTimeRef = useRef<number>(0.2) // seconds to schedule ahead
+  const nextNoteTimeRef = useRef<number>(0) // AudioContext time for next note
+  const nextBeatIndexRef = useRef<number>(0)
+  const schedulerTimerRef = useRef<number | null>(null)
+
+  // Visual pulse canvas
+  const pulseCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (audioContext && isReady) {
-      const gainNode = audioContext.createGain()
-      gainNode.connect(audioContext.destination)
-      gainNode.gain.value = volume[0]
-      gainNodeRef.current = gainNode
+      // Initialize (or update) master gain
+      if (!masterGainRef.current) {
+        masterGainRef.current = audioContext.createGain()
+        masterGainRef.current.connect(audioContext.destination)
+      }
+      masterGainRef.current.gain.value = volume[0]
     }
   }, [audioContext, isReady, volume])
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
+      // Cleanup timers/raf
+      if (schedulerTimerRef.current) {
+        window.clearInterval(schedulerTimerRef.current)
+        schedulerTimerRef.current = null
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
       }
     }
   }, [])
+  const scheduleClick = useCallback(
+    (time: number, isDownbeat = false) => {
+      if (!audioContext || !masterGainRef.current) return
+      const osc = audioContext.createOscillator()
+      const clickGain = audioContext.createGain()
+      osc.connect(clickGain)
+      clickGain.connect(masterGainRef.current)
+      osc.type = "square"
+      const freq = isDownbeat ? 1000 : 800
+      osc.frequency.setValueAtTime(freq, time)
+      // envelope
+      clickGain.gain.setValueAtTime(0, time)
+      clickGain.gain.linearRampToValueAtTime(0.4, time + 0.01)
+      clickGain.gain.linearRampToValueAtTime(0, time + 0.08)
+      osc.start(time)
+      osc.stop(time + 0.1)
+    },
+    [audioContext],
+  )
 
-  const playClick = (isDownbeat = false) => {
-    if (!audioContext || !gainNodeRef.current) return
+  const schedulerTick = useCallback(() => {
+    if (!audioContext || !isPlaying) return
+    const secondsPerBeat = 60.0 / bpm[0]
+    while (nextNoteTimeRef.current < audioContext.currentTime + scheduleAheadTimeRef.current) {
+      const isDownbeat = nextBeatIndexRef.current % beats === 0
+      scheduleClick(nextNoteTimeRef.current, isDownbeat)
+      // advance to next
+      nextNoteTimeRef.current += secondsPerBeat
+      nextBeatIndexRef.current = (nextBeatIndexRef.current + 1) % beats
+    }
+  }, [audioContext, isPlaying, bpm, beats, scheduleClick])
 
-    const oscillator = audioContext.createOscillator()
-    const clickGain = audioContext.createGain()
+  const startVisualPulse = useCallback(() => {
+    if (!audioContext) return
+    const canvas = pulseCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
 
-    oscillator.connect(clickGain)
-    clickGain.connect(gainNodeRef.current)
+    const render = () => {
+      const width = canvas.width
+      const height = canvas.height
+      ctx.clearRect(0, 0, width, height)
 
-    // Different frequencies for downbeat vs regular beat
-    oscillator.frequency.setValueAtTime(isDownbeat ? 1000 : 800, audioContext.currentTime)
-    oscillator.type = "square"
+      // progress within current beat [0,1)
+      const spb = 60.0 / bpm[0]
+      const now = audioContext.currentTime
+      // Find the time of the last scheduled tick in the past
+      // Using nextNoteTimeRef gives the time of the next beat; compute last
+      const nextTime = nextNoteTimeRef.current
+      const lastTime = nextTime - spb
+      const phase = Math.min(1, Math.max(0, (now - lastTime) / spb))
 
-    // Short click envelope
-    clickGain.gain.setValueAtTime(0, audioContext.currentTime)
-    clickGain.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.01)
-    clickGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1)
+      // Draw bar background
+      ctx.fillStyle = "#e5e7eb"
+      ctx.fillRect(0, height - 6, width, 6)
 
-    oscillator.start(audioContext.currentTime)
-    oscillator.stop(audioContext.currentTime + 0.1)
-  }
+      // Draw progress
+      ctx.fillStyle = "#3b82f6"
+      ctx.fillRect(0, height - 6, width * phase, 6)
+
+      // Beat circles pulse
+      const count = beats
+      const margin = 8
+      const circleAreaW = width - margin * 2
+      const step = circleAreaW / count
+      for (let i = 0; i < count; i++) {
+        const isDown = i === 0
+        const cx = margin + step * i + step / 2
+        const cy = height / 2
+        const baseR = 8
+        const pulse = i === ((nextBeatIndexRef.current - 1 + count) % count) ? 1 : 0
+        const r = baseR + pulse * 6
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.fillStyle = isDown ? "#ef4444" : "#60a5fa"
+        ctx.fill()
+      }
+
+      rafRef.current = requestAnimationFrame(render)
+    }
+    // Kick off
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = requestAnimationFrame(render)
+  }, [audioContext, bpm, beats])
 
   const startMetronome = () => {
-    if (!isReady) return
-
+    if (!isReady || !audioContext) return
+    // Resume audio context on user gesture if needed
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {})
+    }
     setIsPlaying(true)
     setCurrentBeat(0)
-
-    const interval = 60000 / bpm[0] // Convert BPM to milliseconds
-
-    intervalRef.current = setInterval(() => {
-      setCurrentBeat((prev) => {
-        const nextBeat = (prev + 1) % beats
-        playClick(nextBeat === 0) // Downbeat on beat 1
-        return nextBeat
-      })
-    }, interval)
-
-    // Play first beat immediately
-    playClick(true)
+    nextBeatIndexRef.current = 0
+    nextNoteTimeRef.current = audioContext.currentTime + 0.05 // small delay to start
+    // Start scheduler
+    if (schedulerTimerRef.current) window.clearInterval(schedulerTimerRef.current)
+    schedulerTimerRef.current = window.setInterval(() => {
+      schedulerTick()
+      // Derive UI beat index from audio schedule for display
+      setCurrentBeat((prev) => nextBeatIndexRef.current === 0 ? beats - 1 : nextBeatIndexRef.current - 1)
+    }, lookaheadRef.current) as unknown as number
+    // Start visual pulse
+    startVisualPulse()
   }
 
   const stopMetronome = () => {
     setIsPlaying(false)
     setCurrentBeat(0)
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+    if (schedulerTimerRef.current) {
+      window.clearInterval(schedulerTimerRef.current)
+      schedulerTimerRef.current = null
+    }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
     }
   }
 
   const handleBpmChange = (newBpm: number[]) => {
     setBpm(newBpm)
-
-    // Restart metronome with new tempo if currently playing
-    if (isPlaying) {
-      stopMetronome()
-      setTimeout(() => startMetronome(), 100)
-    }
   }
 
   const handleVolumeChange = (newVolume: number[]) => {
     setVolume(newVolume)
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = newVolume[0]
+    if (masterGainRef.current) {
+      masterGainRef.current.gain.value = newVolume[0]
     }
   }
 
   const adjustBpm = (delta: number) => {
     const newBpm = Math.max(40, Math.min(200, bpm[0] + delta))
     setBpm([newBpm])
-
-    if (isPlaying) {
-      stopMetronome()
-      setTimeout(() => startMetronome(), 100)
-    }
   }
 
   const getTempoMarking = (bpm: number): string => {
@@ -131,7 +206,7 @@ export default function Metronome({ audioContext, isReady }: MetronomeProps) {
   }
 
   return (
-    <Card>
+    <Card className="card-surface elevated">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
@@ -144,8 +219,8 @@ export default function Metronome({ audioContext, isReady }: MetronomeProps) {
       <CardContent className="space-y-6">
         {/* BPM Display */}
         <div className="text-center space-y-2">
-          <div className="text-4xl font-bold text-blue-600">{bpm[0]}</div>
-          <div className="text-sm text-gray-600">{getTempoMarking(bpm[0])}</div>
+          <div className="text-4xl font-bold text-primary">{bpm[0]}</div>
+          <div className="text-sm text-muted-foreground">{getTempoMarking(bpm[0])}</div>
         </div>
 
         {/* Playback Controls */}
@@ -183,7 +258,7 @@ export default function Metronome({ audioContext, isReady }: MetronomeProps) {
             </Button>
           </div>
 
-          <div className="text-center text-sm text-gray-600">40 - 200 BPM</div>
+          <div className="text-center text-sm text-muted-foreground">40 - 200 BPM</div>
         </div>
 
         {/* Time Signature */}
@@ -203,12 +278,22 @@ export default function Metronome({ audioContext, isReady }: MetronomeProps) {
           </div>
         </div>
 
+        {/* Visual Pulse Canvas */}
+        <div className="w-full">
+          <canvas
+            ref={pulseCanvasRef}
+            width={560}
+            height={60}
+            className="w-full h-16 rounded-md bg-card border"
+          />
+        </div>
+
         {/* Volume Control */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Volume2 className="h-4 w-4" />
             <label className="text-sm font-medium">Volume</label>
-            <span className="text-sm text-gray-500 ml-auto">{Math.round(volume[0] * 100)}%</span>
+            <span className="text-sm text-muted-foreground ml-auto">{Math.round(volume[0] * 100)}%</span>
           </div>
           <Slider value={volume} onValueChange={handleVolumeChange} max={1} min={0} step={0.1} className="w-full" />
         </div>
@@ -234,7 +319,7 @@ export default function Metronome({ audioContext, isReady }: MetronomeProps) {
           </div>
         </div>
 
-        {/* Status */}
+  {/* Status */}
         <div className="text-center">
           <Badge variant={isPlaying ? "default" : "secondary"} className="text-sm">
             {isPlaying ? `Beat ${currentBeat + 1} of ${beats}` : "Ready to start"}

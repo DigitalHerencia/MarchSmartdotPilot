@@ -154,7 +154,7 @@ export default function MusicPlayer({ audioContext, isReady }: MusicPlayerProps)
   }
 
   return (
-    <Card>
+    <Card className="card-surface elevated">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Music className="h-5 w-5" />
@@ -168,9 +168,9 @@ export default function MusicPlayer({ audioContext, isReady }: MusicPlayerProps)
         {/* Track Info */}
         <div className="text-center space-y-2">
           <h3 className="font-medium text-lg">{tracks[currentTrack].name}</h3>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-secondary rounded-full h-2">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-100"
+              className="bg-primary h-2 rounded-full transition-all duration-100"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -201,11 +201,11 @@ export default function MusicPlayer({ audioContext, isReady }: MusicPlayerProps)
         </div>
 
         {/* Volume Control */}
-        <div className="space-y-3">
+    <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Volume2 className="h-4 w-4" />
             <label className="text-sm font-medium">Volume</label>
-            <span className="text-sm text-gray-500 ml-auto">{Math.round(volume[0] * 100)}%</span>
+      <span className="text-sm text-muted-foreground ml-auto">{Math.round(volume[0] * 100)}%</span>
           </div>
           <Slider value={volume} onValueChange={handleVolumeChange} max={1} min={0} step={0.1} className="w-full" />
         </div>
@@ -217,9 +217,9 @@ export default function MusicPlayer({ audioContext, isReady }: MusicPlayerProps)
         </div>
 
         {/* Info Panel */}
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-2 text-blue-900">Practice Tracks</h4>
-          <p className="text-sm text-blue-700">
+        <div className="bg-secondary p-4 rounded-lg">
+          <h4 className="font-medium mb-2">Practice Tracks</h4>
+          <p className="text-sm text-muted-foreground">
             Use these practice tracks to synchronize formations with music. Upload your own tracks for custom routines.
           </p>
         </div>

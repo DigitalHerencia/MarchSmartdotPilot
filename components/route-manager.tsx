@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Route, Star, Circle, Square, Triangle } from "lucide-react"
 import type { MarchingRoute, Waypoint } from "../types/marching-band"
+import RouteEditor from "@/features/routes/RouteEditor"
 
 interface RouteManagerProps {
   currentRoute: MarchingRoute | null
@@ -159,7 +160,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
   }
 
   return (
-    <Card>
+  <Card className="card-surface elevated">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Route className="h-5 w-5" />
@@ -171,7 +172,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+  <CardContent className="space-y-6">
         {!currentRoute ? (
           <div className="space-y-6">
             {/* Create New Route */}
@@ -212,11 +213,11 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
             <div className="space-y-4">
               <h3 className="font-medium text-lg">Preset Formations</h3>
               <div className="grid grid-cols-1 gap-3">
-                <Button variant="outline" onClick={() => loadPresetRoute("parade")} className="h-12 justify-start">
+        <Button variant="outline" onClick={() => loadPresetRoute("parade")} className="h-12 justify-start">
                   <Square className="h-4 w-4 mr-3" />
                   <div className="text-left">
                     <div className="font-medium">Parade Formation</div>
-                    <div className="text-xs text-gray-500">Straight line marching</div>
+          <div className="text-xs text-muted-foreground">Straight line marching</div>
                   </div>
                 </Button>
 
@@ -224,7 +225,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
                   <Star className="h-4 w-4 mr-3" />
                   <div className="text-left">
                     <div className="font-medium">Halftime Show</div>
-                    <div className="text-xs text-gray-500">Complex multi-formation</div>
+                    <div className="text-xs text-muted-foreground">Complex multi-formation</div>
                   </div>
                 </Button>
 
@@ -232,7 +233,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
                   <Circle className="h-4 w-4 mr-3" />
                   <div className="text-left">
                     <div className="font-medium">Circle Formation</div>
-                    <div className="text-xs text-gray-500">Circular movement pattern</div>
+                    <div className="text-xs text-muted-foreground">Circular movement pattern</div>
                   </div>
                 </Button>
 
@@ -240,7 +241,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
                   <Star className="h-4 w-4 mr-3" />
                   <div className="text-left">
                     <div className="font-medium">Star Formation</div>
-                    <div className="text-xs text-gray-500">Five-point star pattern</div>
+                    <div className="text-xs text-muted-foreground">Five-point star pattern</div>
                   </div>
                 </Button>
 
@@ -248,7 +249,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
                   <Triangle className="h-4 w-4 mr-3" />
                   <div className="text-left">
                     <div className="font-medium">Marching Drill</div>
-                    <div className="text-xs text-gray-500">Basic drill patterns</div>
+                    <div className="text-xs text-muted-foreground">Basic drill patterns</div>
                   </div>
                 </Button>
 
@@ -256,7 +257,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
                   <Square className="h-4 w-4 mr-3" />
                   <div className="text-left">
                     <div className="font-medium">Line Formation</div>
-                    <div className="text-xs text-gray-500">Straight line across field</div>
+                    <div className="text-xs text-muted-foreground">Straight line across field</div>
                   </div>
                 </Button>
               </div>
@@ -265,9 +266,9 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
         ) : (
           <div className="space-y-6">
             {/* Current Route Info */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-medium text-blue-900">{currentRoute.name}</h3>
-              <p className="text-sm text-blue-700 mt-1">{currentRoute.description}</p>
+            <div className="bg-secondary p-4 rounded-lg">
+              <h3 className="font-medium">{currentRoute.name}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{currentRoute.description}</p>
               <div className="flex gap-2 mt-3">
                 <Badge variant="secondary">{currentRoute.waypoints.length} waypoints</Badge>
                 <Badge variant="secondary">{(currentRoute.duration / 1000).toFixed(1)}s duration</Badge>
@@ -329,7 +330,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
               ) : (
                 <div className="max-h-48 overflow-y-auto space-y-2">
                   {currentRoute.waypoints.map((waypoint, index) => (
-                    <div key={waypoint.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={waypoint.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -342,7 +343,7 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
                           <div className="text-sm font-medium">
                             ({waypoint.x.toFixed(1)}, {waypoint.y.toFixed(1)})
                           </div>
-                          <div className="text-xs text-gray-500">{waypoint.formation}</div>
+                          <div className="text-xs text-muted-foreground">{waypoint.formation}</div>
                         </div>
                       </div>
                       <Button
@@ -366,11 +367,14 @@ export default function RouteManager({ currentRoute, onRouteChange }: RouteManag
               </Button>
             </div>
 
+            {/* Import/Export */}
+            <RouteEditor route={currentRoute} onRouteChange={onRouteChange} />
+
             {/* Tips */}
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="font-medium text-green-900 mb-2">Tips</h4>
-              <ul className="text-sm text-green-700 space-y-1">
-                <li>• Click "Add Points" on the field view to add waypoints by clicking</li>
+            <div className="bg-secondary p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Tips</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Click &quot;Add Points&quot; on the field view to add waypoints by clicking</li>
                 <li>• First waypoint (green) is the starting position</li>
                 <li>• Waypoints are connected in order to show the path</li>
                 <li>• Use preset formations as starting points for custom routes</li>

@@ -6,16 +6,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Users, Route, Music, Target, AlertCircle } from "lucide-react"
+import Link from "next/link"
+import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs"
+import { getPreferences } from "@/lib/actions/preferences"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import FieldView from "../components/field-view"
+import VisualCueLayer from "@/features/performance/VisualCueLayer"
+import SheetOverlay from "@/features/performance/SheetOverlay"
 import MusicPlayer from "../components/music-player"
 import Metronome from "../components/metronome"
 import RouteManager from "../components/route-manager"
+import RouteViewer from "@/features/routes/RouteViewer"
+import PracticeHUD from "@/features/practice/PracticeHUD"
+import MusicUpload from "@/features/practice/MusicUpload"
+import PhrasingSuggest from "@/features/practice/PhrasingSuggest"
 import StudentTracker from "../components/student-tracker"
 import { useGPSTracking } from "../hooks/use-gps-tracking"
 import { useAudioContext } from "../hooks/use-audio-context"
 import type { Student, MarchingRoute, Position } from "../types/marching-band"
+import type { AffineTransform } from "@/features/field/utils/fieldMath"
 
 export default function MarchingBandApp() {
   const [students, setStudents] = useState<Student[]>([])
@@ -27,12 +37,32 @@ export default function MarchingBandApp() {
   const [calibrationProgress, setCalibrationProgress] = useState(0)
   const [calibrationSamples, setCalibrationSamples] = useState<number[]>([])
   const [calibratedAccuracy, setCalibratedAccuracy] = useState<number | null>(null)
+  const [previewIndex, setPreviewIndex] = useState(0)
+  const [transform, setTransform] = useState<AffineTransform | null>(null)
+  const [bpm] = useState(120)
+  const [stepSizeYards, setStepSizeYards] = useState(0.75) // default ~27 inches
+  const [fieldType, setFieldType] = useState<"high-school" | "college">("high-school")
+  const [notationStyle, setNotationStyle] = useState<"yardline" | "steps-off">("yardline")
 
   // Get GPS tracking data from the hook
   const gpsTracking = useGPSTracking()
-  const { position, accuracy, isLocationEnabled, requestLocation } = gpsTracking
+  const { position, accuracy, isLocationEnabled, requestLocation, startTracking, stopTracking } = gpsTracking
 
   const { audioContext, isAudioReady } = useAudioContext()
+
+  useEffect(() => {
+    // Load user preferences if signed in; silently ignore errors
+    ;(async () => {
+      try {
+        const pref = await getPreferences()
+        if (pref) {
+          if (typeof pref.stepSizeYards === "number") setStepSizeYards(pref.stepSizeYards)
+          if (pref.fieldType === "high-school" || pref.fieldType === "college") setFieldType(pref.fieldType)
+          if (pref.notationStyle === "yardline" || pref.notationStyle === "steps-off") setNotationStyle(pref.notationStyle)
+        }
+      } catch {}
+    })()
+  }, [])
 
   useEffect(() => {
     // Initialize with sample student data
@@ -68,9 +98,7 @@ export default function MarchingBandApp() {
 
   useEffect(() => {
     if (position && currentStudentId) {
-      // Convert GPS coordinates to field coordinates
       const fieldPosition = convertGPSToFieldCoordinates(position)
-
       setStudents((prev) =>
         prev.map((student) => (student.id === currentStudentId ? { ...student, position: fieldPosition } : student)),
       )
@@ -98,13 +126,26 @@ export default function MarchingBandApp() {
   }, [isCalibrating, position, accuracy, calibrationSamples])
 
   const convertGPSToFieldCoordinates = (gpsPos: GeolocationPosition): Position => {
-    // Convert GPS coordinates to field coordinates (simplified conversion)
-    const fieldX = (gpsPos.coords.longitude + 180) * (120 / 360)
-    const fieldY = (gpsPos.coords.latitude + 90) * (53.33 / 180)
-
+    const lat = gpsPos.coords.latitude
+    const lon = gpsPos.coords.longitude
+    let x: number
+    let y: number
+    if (transform) {
+      // Use calibrated affine transform
+      const f = {
+        x: transform.m[0] * lat + transform.m[1] * lon + transform.m[2],
+        y: transform.m[3] * lat + transform.m[4] * lon + transform.m[5],
+      }
+      x = f.x
+      y = f.y
+    } else {
+      // Fallback naive mapping
+      x = (lon + 180) * (120 / 360)
+      y = (lat + 90) * (53.33 / 180)
+    }
     return {
-      x: Math.max(0, Math.min(120, fieldX)),
-      y: Math.max(0, Math.min(53.33, fieldY)),
+      x: Math.max(0, Math.min(120, x)),
+      y: Math.max(0, Math.min(53.33, y)),
       timestamp: Date.now(),
     }
   }
@@ -113,10 +154,14 @@ export default function MarchingBandApp() {
     if (!isLocationEnabled) {
       await requestLocation()
     }
+    // Start the GPS watcher/worker loop from the hook
+    startTracking()
     setIsTracking(true)
   }
 
   const handleStopTracking = () => {
+    // Stop the GPS watcher/worker loop from the hook
+    stopTracking()
     setIsTracking(false)
   }
 
@@ -150,46 +195,12 @@ export default function MarchingBandApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Marching Band Studio</h1>
-              <p className="text-sm md:text-base text-gray-600">Real-time GPS tracking and practice</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant={isTracking ? "default" : "secondary"} className="text-xs md:text-sm px-3 py-1">
-                {isTracking ? "GPS Active" : "GPS Inactive"}
-              </Badge>
-              {accuracy && (
-                <Badge
-                  variant={accuracy < 3 ? "success" : accuracy < 10 ? "warning" : "destructive"}
-                  className="text-xs"
-                >
-                  ±{accuracy.toFixed(1)}m
-                </Badge>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                className="hidden md:flex items-center gap-1"
-                onClick={startCalibration}
-              >
-                <Target className="h-3 w-3" />
-                Calibrate GPS
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto p-4 space-y-6">
+    <div className="min-h-screen">
+      <div className="container-app py-6 space-y-6">
         {/* Mobile Navigation */}
-        <div className="lg:hidden">
+  <div className="lg:hidden anchor-offset" id="field">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 h-12">
+            <TabsList className="tabs-pills grid w-full grid-cols-4 h-12">
               <TabsTrigger value="field" className="flex flex-col gap-1 text-xs">
                 <Route className="h-4 w-4" />
                 Field
@@ -209,7 +220,7 @@ export default function MarchingBandApp() {
             </TabsList>
 
             <TabsContent value="field" className="mt-4">
-              <Card>
+              <Card className="card-surface elevated">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center justify-between text-lg">
                     Football Field
@@ -226,27 +237,67 @@ export default function MarchingBandApp() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <FieldView
+                  <div className="relative">
+                    <FieldView
                     students={students}
                     route={currentRoute}
                     isTracking={isTracking}
                     accuracy={accuracy || undefined}
                     onRouteChange={setCurrentRoute}
-                  />
+                    previewIndex={previewIndex}
+                    currentGeo={position ? { lat: position.coords.latitude, lon: position.coords.longitude } : null}
+                    currentFieldPos={students.find((s) => s.id === currentStudentId)?.position || null}
+                    stepSizeYards={stepSizeYards}
+                    fieldType={fieldType}
+                    notationStyle={notationStyle}
+                    onCalibrated={(t, rms) => {
+                      setTransform(t)
+                      // Optionally show feedback to user later using rms
+                    }}
+                    />
+                    {/* Performance overlays */}
+                    <div className="absolute inset-0">
+                      <VisualCueLayer
+                        width={800}
+                        height={400}
+                        bpm={bpm}
+                        audioContext={audioContext}
+                        visible={true}
+                      />
+                      <SheetOverlay text={`Next: Step ${previewIndex + 1}`} visible={true} />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <PracticeHUD
+                      bpm={bpm}
+                      stepSizeYards={stepSizeYards}
+                      current={students.find((s) => s.id === currentStudentId)?.position || null}
+                      route={currentRoute}
+                      previewIndex={previewIndex}
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="music" className="mt-4 space-y-4">
+            <TabsContent value="music" className="mt-4 space-y-4 anchor-offset" id="music">
               <MusicPlayer audioContext={audioContext} isReady={isAudioReady} />
               <Metronome audioContext={audioContext} isReady={isAudioReady} />
+              <MusicUpload />
+              {process.env.NEXT_PUBLIC_ENABLE_AI_PHRASE === "1" && <PhrasingSuggest />}
             </TabsContent>
 
-            <TabsContent value="routes" className="mt-4">
-              <RouteManager currentRoute={currentRoute} onRouteChange={setCurrentRoute} />
+            <TabsContent value="routes" className="mt-4 anchor-offset" id="routes">
+              <div className="space-y-4">
+                <RouteManager currentRoute={currentRoute} onRouteChange={setCurrentRoute} />
+                <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+              </div>
             </TabsContent>
 
-            <TabsContent value="students" className="mt-4">
+            <TabsContent value="students" className="mt-4 anchor-offset" id="students">
               <StudentTracker
                 students={students}
                 currentStudentId={currentStudentId}
@@ -264,7 +315,7 @@ export default function MarchingBandApp() {
             <Card
               className={`border-l-4 ${
                 accuracy < 3 ? "border-l-green-500" : accuracy < 10 ? "border-l-amber-500" : "border-l-red-500"
-              }`}
+              } card-surface elevated`}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -288,10 +339,10 @@ export default function MarchingBandApp() {
         </div>
 
         {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-6">
+  <div className="hidden lg:grid lg:grid-cols-3 gap-6" id="field-desktop">
           {/* Main Field View */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="card-surface elevated">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   Football Field - Overhead View
@@ -312,14 +363,39 @@ export default function MarchingBandApp() {
                   </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+                <CardContent>
+                <div className="relative">
                 <FieldView
                   students={students}
                   route={currentRoute}
                   isTracking={isTracking}
                   accuracy={accuracy || undefined}
                   onRouteChange={setCurrentRoute}
+                  previewIndex={previewIndex}
+                  currentGeo={position ? { lat: position.coords.latitude, lon: position.coords.longitude } : null}
+                  currentFieldPos={students.find((s) => s.id === currentStudentId)?.position || null}
+                  stepSizeYards={stepSizeYards}
+                  fieldType={fieldType}
+                  notationStyle={notationStyle}
+                  onCalibrated={(t) => setTransform(t)}
                 />
+                <div className="absolute inset-0">
+                  <VisualCueLayer width={800} height={400} bpm={bpm} audioContext={audioContext} visible={true} />
+                  <SheetOverlay text={`Next: Step ${previewIndex + 1}`} visible={true} />
+                </div>
+                </div>
+                <div className="mt-4">
+                  <PracticeHUD
+                    bpm={bpm}
+                    stepSizeYards={stepSizeYards}
+                    current={students.find((s) => s.id === currentStudentId)?.position || null}
+                    route={currentRoute}
+                    previewIndex={previewIndex}
+                  />
+                </div>
+                <div className="mt-4">
+                  <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -327,7 +403,7 @@ export default function MarchingBandApp() {
           {/* Control Panel */}
           <div className="space-y-6">
             <Tabs defaultValue="music" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-12">
+              <TabsList className="tabs-pills grid w-full grid-cols-3 h-12">
                 <TabsTrigger value="music" className="text-sm">
                   Music
                 </TabsTrigger>
@@ -342,10 +418,15 @@ export default function MarchingBandApp() {
               <TabsContent value="music" className="space-y-4 mt-4">
                 <MusicPlayer audioContext={audioContext} isReady={isAudioReady} />
                 <Metronome audioContext={audioContext} isReady={isAudioReady} />
+                <MusicUpload />
+                {process.env.NEXT_PUBLIC_ENABLE_AI_PHRASE === "1" && <PhrasingSuggest />}
               </TabsContent>
 
               <TabsContent value="routes" className="mt-4">
-                <RouteManager currentRoute={currentRoute} onRouteChange={setCurrentRoute} />
+                <div className="space-y-4">
+                  <RouteManager currentRoute={currentRoute} onRouteChange={setCurrentRoute} />
+                  <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+                </div>
               </TabsContent>
 
               <TabsContent value="students" className="mt-4">

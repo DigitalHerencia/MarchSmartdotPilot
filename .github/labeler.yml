@@ -1,0 +1,13 @@
+'feature: gps':
+  - 'march-smart/features/gps/**'
+'feature: routes':
+  - 'march-smart/features/routes/**'
+'feature: practice':
+  - 'march-smart/features/practice/**'
+'ui':
+  - 'march-smart/components/**'
+'tests':
+  - 'march-smart/**/*.test.ts'
+  - 'march-smart/e2e/**'
+'ci':
+  - 'march-smart/.github/**'

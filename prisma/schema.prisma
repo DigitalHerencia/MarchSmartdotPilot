@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String            @id @default(cuid())
+  // Clerk userId is the same id; map 1:1
+  preferences   UserPreferences?
+  routes        Route[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Route {
+  id          String     @id @default(cuid())
+  name        String
+  description String     @default("")
+  duration    Int        @default(0)
+  formations  String[]
+  waypoints   Waypoint[]
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Waypoint {
+  id        String  @id @default(cuid())
+  x         Float
+  y         Float
+  timestamp BigInt
+  formation String?
+  routeId   String
+  route     Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+}
+
+model UserPreferences {
+  id             String   @id @default(cuid())
+  stepSizeYards  Float    @default(0.75)
+  fieldType      String   @default("high-school")
+  notationStyle  String   @default("yardline")
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+}

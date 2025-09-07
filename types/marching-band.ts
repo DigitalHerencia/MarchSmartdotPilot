@@ -10,6 +10,8 @@ export interface Student {
   instrument: string
   section: "brass" | "woodwind" | "percussion" | "colorguard"
   position: Position
+  // Optional: live geo position for calibration (lat/lon in degrees)
+  geo?: { lat: number; lon: number }
   isActive: boolean
 }
 
