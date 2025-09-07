@@ -43,7 +43,7 @@ export default function PracticeHUD({
             <span>
               {metrics.distYards.toFixed(1)} yd ({metrics.distSteps.toFixed(1)} steps)
               <span className="ml-2 text-muted-foreground">
-                lat {metrics.compsY.lateralYards.toFixed(1)}y ({metrics.compsS.lateralSteps.toFixed(1)}st), long {metrics.compsY.longitudinalYards.toFixed(1)}y ({metrics.compsS.longitudinalSteps.toFixed(1)}st)
+                Lateral {metrics.compsY.lateralYards.toFixed(1)} yards ({metrics.compsS.lateralSteps.toFixed(1)} steps), Longitudinal {metrics.compsY.longitudinalYards.toFixed(1)} yards ({metrics.compsS.longitudinalSteps.toFixed(1)} steps)
               </span>
               <span className="ml-2 text-muted-foreground">→ dx {metrics.dir.x.toFixed(2)}, dy {metrics.dir.y.toFixed(2)}</span>
             </span>
