@@ -1,4 +1,3 @@
-
 # 🎺 Marching Band Progressive Web App – PRD
 
 ## 1. Product Overview
@@ -18,6 +17,16 @@ This PWA enables marching band members to learn, practice, and perform shows wit
 ---
 
 ## 3. Core Features
+
+| Domain | Feature | Functionality | Implementation Details |
+|---|---|---|---|
+| GPS | Worker‑based tracking | 2 Hz updates with optional Kalman smoothing, exposes accuracy metrics | useGpsTracker spawns a Web Worker to throttle geolocation and smooth output, publishing accuracy stats to a shared store |
+| Field | Calibration & math | Solves affine transform from geo points → field coordinates; applies transform & RMS error | Utilities compute least‑squares transform and apply it for on‑field positioning |
+| Routes | CRUD & offline sync | Zod‑validated route schema, server actions backed by Prisma or in‑memory store; offline queue syncs on reconnect | Server actions gate on Clerk auth and use Prisma when DATABASE_URL is present<br>IndexedDB queue drains once online via client sync helper |
+| Practice | HUD & music tools | Practice HUD computes distance/steps to target, MusicXML upload + phrase map, settings persisted via server action | Settings action enforces Clerk auth and writes preferences via Prisma |
+| Performance | Visual cues | Canvas layer pulses yard lines in time with BPM; overlay for cue text | VisualCueLayer renders beat‑synced pulses using AudioContext timing |
+| Auth | Clerk integration | Middleware protects routes; dynamic sign‑in/sign‑up pages | Global middleware applies Clerk, sign‑in/-up pages render Clerk components |
+| Data | Neon/Prisma | PostgreSQL models for users, routes, waypoints, preferences | Prisma schema targets Postgres via DATABASE_URL environment variable, enabling Neon usage |
 
 ### 3.1 GPS Tracking & Field Grid
 
