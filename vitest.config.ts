@@ -11,18 +11,13 @@ export default defineConfig({
       "lib/**/*.test.ts",
       "schemas/**/*.test.ts",
     ],
-  exclude: ["e2e/**", "**/*.spec.ts", "node_modules/**", "**/dist/**"],
+    exclude: ["e2e/**", "**/*.spec.ts", "node_modules/**", "**/dist/**"],
     globals: true,
     setupFiles: [],
     coverage: {
       reporter: ["text", "html"],
       include: ["features/**/utils/**/*.ts", "schemas/**/*.ts"],
-      exclude: [
-        "**/*.test.ts",
-        "app/**",
-        "components/**",
-        "features/**/workers/**",
-      ],
+      exclude: ["**/*.test.ts", "app/**", "components/**", "features/**/workers/**"],
       thresholds: {
         lines: 0.7,
         functions: 0.7,
