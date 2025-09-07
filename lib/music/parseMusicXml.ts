@@ -45,8 +45,15 @@ export async function parseMusicXml(file: File): Promise<ParsedMusic> {
     if (perMin) t = Number(perMin)
     if (t) tempoChanges.push({ measure: idx + 1, bpm: t })
   })
-  if (tempoChanges.length) tempo = tempoChanges[0].bpm
-  else tempoChanges.push({ measure: 1, bpm: tempo })
+  if (tempoChanges.length) {
+    // If the first tempo change is not at measure 1, insert the initial tempo at measure 1
+    if (tempoChanges[0].measure !== 1) {
+      tempoChanges.unshift({ measure: 1, bpm: tempo })
+    }
+    tempo = tempoChanges[0].bpm
+  } else {
+    tempoChanges.push({ measure: 1, bpm: tempo })
+  }
 
   const divisions = Number(doc.querySelector("divisions")?.textContent || 1)
   const measures = measuresNodes.map((m, idx) => {
