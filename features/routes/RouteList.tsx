@@ -66,9 +66,10 @@ export default function RouteList() {
         setRoutes((prev) => prev.filter((r) => r.id !== id));
       } catch {
         // refetch on error
-        const refreshed = await fetchRoutes();
-        setRoutes(refreshed);
-      }
+        if (typeof fetchRoutes === "function") {
+          const refreshed = await fetchRoutes();
+          setRoutes(refreshed);
+        } // else, do nothing (fetchRoutes not defined)
     });
   }
 
