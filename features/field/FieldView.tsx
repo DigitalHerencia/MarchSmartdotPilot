@@ -870,7 +870,7 @@ export default function FieldView({
           ref={canvasRef}
           width={canvasSize.width}
           height={canvasSize.height}
-          className="border-2 border-border rounded-lg w-full cursor-move touch-none"
+          className="border-2 border-border rounded-lg w-full cursor-move"
           style={{
             maxWidth: "100%",
             height: "auto",
