@@ -9,7 +9,11 @@ export function useAudioContext() {
   useEffect(() => {
     const initAudioContext = async () => {
       try {
-        const context = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const Ctor =
+          window.AudioContext ||
+          (window as Window & { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext
+        const context = new Ctor()
 
         // Resume context if suspended (required by some browsers)
         if (context.state === "suspended") {
@@ -37,12 +41,14 @@ export function useAudioContext() {
     return () => {
       document.removeEventListener("click", handleUserInteraction)
       document.removeEventListener("touchstart", handleUserInteraction)
-
-      if (audioContext) {
-        audioContext.close()
-      }
     }
   }, [])
+
+  useEffect(() => {
+    return () => {
+      audioContext?.close()
+    }
+  }, [audioContext])
 
   return { audioContext, isAudioReady }
 }

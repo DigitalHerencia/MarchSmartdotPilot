@@ -73,7 +73,7 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(RUNTIME_CACHE);
         cache.put(request, response.clone());
         return response;
-      } catch (err) {
+        } catch {
         const cache = await caches.open(STATIC_CACHE);
         const cached = await caches.match(request);
         return cached || (await cache.match(OFFLINE_URL));
@@ -104,13 +104,13 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(IMG_CACHE);
       const cached = await cache.match(request);
       if (cached) return cached;
-      try {
-        const resp = await fetch(request);
-        cache.put(request, resp.clone());
-        return resp;
-      } catch (err) {
-        return caches.match('/vercel.svg');
-      }
+        try {
+          const resp = await fetch(request);
+          cache.put(request, resp.clone());
+          return resp;
+        } catch {
+          return caches.match('/vercel.svg');
+        }
     })());
     return;
   }

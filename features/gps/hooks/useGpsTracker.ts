@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { gpsStore } from "@/lib/gps/store";
 
 interface GPSTrackingState {
@@ -58,10 +58,10 @@ export function useGpsTracker(opts: UseGpsOptions = {}) {
         );
       });
       return true;
-    } catch (e) {
-      setState((p) => ({ ...p, error: "Failed to request location permission" }));
-      return false;
-    }
+      } catch {
+        setState((p) => ({ ...p, error: "Failed to request location permission" }));
+        return false;
+      }
   }, []);
 
   const startTracking = useCallback(() => {

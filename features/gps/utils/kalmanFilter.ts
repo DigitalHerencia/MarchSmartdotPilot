@@ -48,9 +48,7 @@ export function createKalman2D(options: Partial<Kalman2DOptions> = {}) {
 
     // x = F * x
     const x = state.x;
-    const nx0 = F[0] * x[0] + F[2] * x[2];
-    const nx1 = F[5 - 4] * x[1] + F[7 - 4] * x[3]; // F[1,1]=1; F[1,3]=dt
-    // Clarify indices: we'll compute manually
+    // Clarify indices: compute next state manually for performance
     const nx_lat = x[0] + dt * x[2];
     const nx_lon = x[1] + dt * x[3];
     const nv_lat = x[2];
