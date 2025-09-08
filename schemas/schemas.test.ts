@@ -53,6 +53,8 @@ describe("ParsedMusic schema", () => {
       measures: [{ number: 1, durationBeats: 4 }],
     })
     expect(m.tempo).toBe(120)
+    expect(m.phrases).toHaveLength(0)
+    expect(m.tempoChanges).toHaveLength(0)
   })
 
   it("rejects invalid time signature", () => {

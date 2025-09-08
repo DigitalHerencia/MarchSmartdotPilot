@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { parseMusicXml } from "@/lib/music/parseMusicXml"
+import { parseMusicPdf } from "@/lib/music/parseMusicPdf"
 import { buildPhraseMap } from "@/lib/music/phraseMap"
 
 export default function MusicUpload() {
@@ -13,15 +14,19 @@ export default function MusicUpload() {
   const pick = () => inputRef.current?.click()
   const onFile = async (file: File) => {
     try {
-      if (!file.name.toLowerCase().endsWith(".xml")) {
-        setSummary("Please upload a MusicXML (.xml) file. PDF parsing is not supported yet.")
+      let parsed
+      if (file.name.toLowerCase().endsWith(".xml")) {
+        parsed = await parseMusicXml(file)
+      } else if (file.name.toLowerCase().endsWith(".pdf")) {
+        parsed = await parseMusicPdf(file)
+      } else {
+        setSummary("Please upload a MusicXML (.xml) or PDF (.pdf) file.")
         return
       }
-      const parsed = await parseMusicXml(file)
       const map = buildPhraseMap(parsed)
       setSummary(
         `${parsed.title || "Untitled"} — ${parsed.tempo} BPM, ${parsed.timeSignature.beats}/${parsed.timeSignature.beatValue}\n` +
-          `Measures: ${parsed.measures.length}, Total counts: ${map.totalCounts}`,
+          `Measures: ${parsed.measures.length}, Phrases: ${parsed.phrases.length}, Total counts: ${map.totalCounts}`,
       )
     } catch (e) {
       setSummary(`Failed to parse: ${(e as Error).message}`)
@@ -33,13 +38,13 @@ export default function MusicUpload() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Music Upload (MusicXML)</CardTitle>
+        <CardTitle className="text-base">Music Upload</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <input
           ref={inputRef}
           type="file"
-          accept=".xml,application/xml"
+          accept=".xml,application/xml,.pdf,application/pdf"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0]
@@ -47,7 +52,7 @@ export default function MusicUpload() {
           }}
         />
         <Button variant="outline" size="sm" onClick={pick}>
-          Choose MusicXML
+          Choose Music
         </Button>
   {summary && <div className="text-sm text-muted-foreground whitespace-pre-wrap">{summary}</div>}
       </CardContent>
