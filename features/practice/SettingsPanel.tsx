@@ -48,7 +48,7 @@ export default function SettingsPanel({ shows }: Props) {
           if (pref.showId) setShowId(pref.showId)
           if (pref.partId) setPartId(pref.partId)
         }
-      } catch {}
+      } catch (e) { console.error("Failed to load preferences:", e); }
     })()
   }, [shows])
 
