@@ -53,21 +53,7 @@ export default function MarchingBandApp() {
 
   const { audioContext, isAudioReady } = useAudioContext();
 
-  useEffect(() => {
-    // Load user preferences if signed in; silently ignore errors
-    (async () => {
-      try {
-        const pref = await getPreferences();
-        if (pref) {
-          if (typeof pref.stepSizeYards === "number") setStepSizeYards(pref.stepSizeYards);
-          if (pref.fieldType === "high-school" || pref.fieldType === "college")
-            setFieldType(pref.fieldType);
-          if (pref.notationStyle === "yardline" || pref.notationStyle === "steps-off")
-            setNotationStyle(pref.notationStyle);
-        }
-      } catch {}
-    })();
-  }, []);
+
 
   useEffect(() => {
     // Initialize with sample student data
@@ -115,23 +101,17 @@ export default function MarchingBandApp() {
   useEffect(() => {
     // Handle calibration process
     if (isCalibrating && position && accuracy) {
-      // Add current accuracy to samples
       setCalibrationSamples((prev) => [...prev, accuracy]);
-
-      // Update progress
-      const progress = Math.min(100, (calibrationSamples.length / 10) * 100);
+      const progress = Math.min(100, ((calibrationSamples.length + 1) / 10) * 100);
       setCalibrationProgress(progress);
-
-      // If we have enough samples, complete calibration
-      if (calibrationSamples.length >= 10) {
-        // Calculate average accuracy from samples
-        const avgAccuracy =
-          calibrationSamples.reduce((sum, val) => sum + val, 0) / calibrationSamples.length;
+      if (calibrationSamples.length + 1 >= 10) {
+        const samples = [...calibrationSamples, accuracy];
+        const avgAccuracy = samples.reduce((sum, val) => sum + val, 0) / samples.length;
         setCalibratedAccuracy(avgAccuracy);
         setIsCalibrating(false);
       }
     }
-  }, [isCalibrating, position, accuracy, calibrationSamples]);
+  }, [isCalibrating, position, accuracy]);
 
   const convertGPSToFieldCoordinates = (gpsPos: GeolocationPosition): Position => {
     const lat = gpsPos.coords.latitude;
@@ -139,13 +119,8 @@ export default function MarchingBandApp() {
     let x: number;
     let y: number;
     if (transform) {
-      // Use calibrated affine transform
-      const f = {
-        x: transform.m[0] * lat + transform.m[1] * lon + transform.m[2],
-        y: transform.m[3] * lat + transform.m[4] * lon + transform.m[5],
-      };
-      x = f.x;
-      y = f.y;
+      x = transform.m[0] * lat + transform.m[1] * lon + transform.m[2];
+      y = transform.m[3] * lat + transform.m[4] * lon + transform.m[5];
     } else {
       // Fallback naive mapping
       x = (lon + 180) * (120 / 360);
@@ -162,13 +137,11 @@ export default function MarchingBandApp() {
     if (!isLocationEnabled) {
       await requestLocation();
     }
-    // Start the GPS watcher/worker loop from the hook
     startTracking();
     setIsTracking(true);
   };
 
   const handleStopTracking = () => {
-    // Stop the GPS watcher/worker loop from the hook
     stopTracking();
     setIsTracking(false);
   };
@@ -292,24 +265,24 @@ export default function MarchingBandApp() {
                     </div>
                   </div>
                   <div className="mt-4">
-                  <PracticeHUD
-                    bpm={bpm}
-                    stepSizeYards={stepSizeYards}
-                    current={students.find((s) => s.id === currentStudentId)?.position || null}
-                    route={currentRoute}
-                    previewIndex={previewIndex}
-                  />
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-4">
-                  <StepPlayback
-                    route={currentRoute}
-                    index={previewIndex}
-                    onIndexChange={setPreviewIndex}
-                    bpm={bpm}
-                    audioContext={audioContext}
-                  />
-                  <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
-                </div>
+                    <PracticeHUD
+                      bpm={bpm}
+                      stepSizeYards={stepSizeYards}
+                      current={students.find((s) => s.id === currentStudentId)?.position || null}
+                      route={currentRoute}
+                      previewIndex={previewIndex}
+                    />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-4">
+                    <StepPlayback
+                      route={currentRoute}
+                      index={previewIndex}
+                      onIndexChange={setPreviewIndex}
+                      bpm={bpm}
+                      audioContext={audioContext}
+                    />
+                    <RouteViewer route={currentRoute} value={previewIndex} onChange={setPreviewIndex} />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -378,7 +351,7 @@ export default function MarchingBandApp() {
         </div>
 
         {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-6" id="field-desktop">
+  <div className="hidden lg:grid lg:grid-cols-3 gap-6" id="field-desktop">
           {/* Main Field View */}
           <div className="lg:col-span-2">
             <Card className="card-surface elevated">
@@ -549,6 +522,9 @@ export default function MarchingBandApp() {
                 <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-600">Accuracy:</span>
+                    <div className={`font-medium ${getAccuracyColor(accuracy)}`}>
+                      ±{accuracy.toFixed(1)}m
+                    </div>
                     <div className={`font-medium ${getAccuracyColor(accuracy)}`}>
                       ±{accuracy.toFixed(1)}m
                     </div>
