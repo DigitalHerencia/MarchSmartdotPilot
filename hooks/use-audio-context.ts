@@ -41,6 +41,9 @@ export function useAudioContext() {
     return () => {
       document.removeEventListener("click", handleUserInteraction)
       document.removeEventListener("touchstart", handleUserInteraction)
+      if (audioContext) {
+        void audioContext.close()
+      }
     }
   }, [])
 
