@@ -9,8 +9,14 @@ export function useAudioContext() {
   useEffect(() => {
     const initAudioContext = async () => {
       try {
-        // Support older webkit prefixed AudioContext implementations safely at runtime
-        const ctor: any = (window as any).AudioContext ?? (window as any).webkitAudioContext
+        // Use a typed window view to avoid `any`
+        const win = (window as unknown) as {
+          AudioContext?: typeof AudioContext
+          webkitAudioContext?: new () => AudioContext
+        }
+
+        // Prefer standard AudioContext, fallback to webkitAudioContext if present
+        const ctor = win.AudioContext ?? win.webkitAudioContext
 
         if (!ctor) {
           throw new Error("AudioContext is not supported in this browser")
