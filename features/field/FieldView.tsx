@@ -703,9 +703,9 @@ export default function FieldView({
       setPan((prev) => ({
         x:
           prev.x +
-          (e.key === "ArrowRight" ? delta : e.key === "ArrowLeft" ? -delta : prev.x - prev.x),
+          (e.key === "ArrowRight" ? delta : e.key === "ArrowLeft" ? -delta : 0),
         y:
-          prev.y + (e.key === "ArrowDown" ? delta : e.key === "ArrowUp" ? -delta : prev.y - prev.y),
+          prev.y + (e.key === "ArrowDown" ? delta : e.key === "ArrowUp" ? -delta : 0),
       }));
     }
   };
