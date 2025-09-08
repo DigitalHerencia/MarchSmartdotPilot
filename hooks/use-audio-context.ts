@@ -9,12 +9,14 @@ export function useAudioContext() {
   useEffect(() => {
     const initAudioContext = async () => {
       try {
-        const context = new (
-          window.AudioContext ||
-          (window as typeof window & {
-            webkitAudioContext: typeof AudioContext
-          }).webkitAudioContext
-        )()
+        // Support older webkit prefixed AudioContext implementations safely at runtime
+        const ctor: any = (window as any).AudioContext ?? (window as any).webkitAudioContext
+
+        if (!ctor) {
+          throw new Error("AudioContext is not supported in this browser")
+        }
+
+        const context: AudioContext = new ctor()
 
         // Resume context if suspended (required by some browsers)
         if (context.state === "suspended") {
@@ -44,7 +46,7 @@ export function useAudioContext() {
       document.removeEventListener("touchstart", handleUserInteraction)
 
       if (audioContext) {
-        audioContext.close()
+        void audioContext.close()
       }
     }
   }, [])

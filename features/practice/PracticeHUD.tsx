@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { distanceYards, directionVector, yardsToSteps } from "@/features/practice/utils/errorMetrics"
+import { distanceYards, directionVector, yardsToSteps, errorComponentsYards, errorComponentsSteps } from "@/features/practice/utils/errorMetrics"
 
 export default function PracticeHUD({
   bpm,
@@ -25,7 +25,9 @@ export default function PracticeHUD({
     const distYards = distanceYards(current, target)
     const distSteps = yardsToSteps(distYards, stepSizeYards)
     const dir = directionVector(current, target)
-    return { distYards, distSteps, dir }
+    const compsY = errorComponentsYards(current, target)
+    const compsS = errorComponentsSteps(current, target, stepSizeYards)
+    return { distYards, distSteps, dir, compsY, compsS }
   }, [current, target, stepSizeYards])
 
   return (
@@ -40,7 +42,10 @@ export default function PracticeHUD({
           {metrics ? (
             <span>
               {metrics.distYards.toFixed(1)} yd ({metrics.distSteps.toFixed(1)} steps)
-              <span className="ml-2 text-muted-foreground">→ dx {(metrics.dir.x).toFixed(2)}, dy {(metrics.dir.y).toFixed(2)}</span>
+              <span className="ml-2 text-muted-foreground">
+                Lateral {metrics.compsY.lateralYards.toFixed(1)} yards ({metrics.compsS.lateralSteps.toFixed(1)} steps), Longitudinal {metrics.compsY.longitudinalYards.toFixed(1)} yards ({metrics.compsS.longitudinalSteps.toFixed(1)} steps)
+              </span>
+              <span className="ml-2 text-muted-foreground">→ dx {metrics.dir.x.toFixed(2)}, dy {metrics.dir.y.toFixed(2)}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">No target</span>

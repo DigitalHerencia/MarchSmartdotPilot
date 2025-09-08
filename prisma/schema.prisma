@@ -44,6 +44,25 @@ model UserPreferences {
   stepSizeYards  Float    @default(0.75)
   fieldType      String   @default("high-school")
   notationStyle  String   @default("yardline")
+  showId         String?
+  partId         String?
   userId         String   @unique
   user           User     @relation(fields: [userId], references: [id])
+}
+
+model Show {
+  id        String @id @default(cuid())
+  name      String
+  parts     Part[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Part {
+  id        String @id @default(cuid())
+  name      String
+  showId    String
+  show      Show   @relation(fields: [showId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
