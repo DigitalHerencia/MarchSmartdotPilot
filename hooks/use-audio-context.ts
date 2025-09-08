@@ -44,14 +44,10 @@ export function useAudioContext() {
       if (audioContext) {
         void audioContext.close()
       }
+      if (audioContext) {
+        audioContext.close()
+      }
     }
   }, [])
-
-  useEffect(() => {
-    return () => {
-      audioContext?.close()
-    }
-  }, [audioContext])
-
   return { audioContext, isAudioReady }
 }
