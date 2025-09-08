@@ -53,7 +53,21 @@ export default function MarchingBandApp() {
 
   const { audioContext, isAudioReady } = useAudioContext();
 
-
+  useEffect(() => {
+    // Load user preferences if signed in; silently ignore errors
+    (async () => {
+      try {
+        const pref = await getPreferences();
+        if (pref) {
+          if (typeof pref.stepSizeYards === "number") setStepSizeYards(pref.stepSizeYards);
+          if (pref.fieldType === "high-school" || pref.fieldType === "college")
+            setFieldType(pref.fieldType);
+          if (pref.notationStyle === "yardline" || pref.notationStyle === "steps-off")
+            setNotationStyle(pref.notationStyle);
+        }
+      } catch {}
+    })();
+  }, []);
 
   useEffect(() => {
     // Initialize with sample student data
@@ -111,7 +125,7 @@ export default function MarchingBandApp() {
         setIsCalibrating(false);
       }
     }
-  }, [isCalibrating, position, accuracy]);
+  }, [isCalibrating, position, accuracy, calibrationSamples]);
 
   const convertGPSToFieldCoordinates = (gpsPos: GeolocationPosition): Position => {
     const lat = gpsPos.coords.latitude;
@@ -351,7 +365,7 @@ export default function MarchingBandApp() {
         </div>
 
         {/* Desktop Layout */}
-  <div className="hidden lg:grid lg:grid-cols-3 gap-6" id="field-desktop">
+        <div className="hidden lg:grid lg:grid-cols-3 gap-6" id="field-desktop">
           {/* Main Field View */}
           <div className="lg:col-span-2">
             <Card className="card-surface elevated">
@@ -522,9 +536,6 @@ export default function MarchingBandApp() {
                 <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-600">Accuracy:</span>
-                    <div className={`font-medium ${getAccuracyColor(accuracy)}`}>
-                      ±{accuracy.toFixed(1)}m
-                    </div>
                     <div className={`font-medium ${getAccuracyColor(accuracy)}`}>
                       ±{accuracy.toFixed(1)}m
                     </div>

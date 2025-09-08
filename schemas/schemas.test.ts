@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { RouteSchema, WaypointSchema } from "./routeSchema"
 import { UserPreferencesSchema } from "./userPreferencesSchema"
 import { ParsedMusicSchema } from "./musicSchema"
+import { ShowSchema, PartSchema } from "./showSchema"
 
 describe("Route & Waypoint schemas", () => {
   it("parses a valid route", () => {
@@ -35,6 +36,12 @@ describe("UserPreferences schema", () => {
   it("rejects non-positive step size", () => {
     expect(() => UserPreferencesSchema.parse({ stepSizeYards: 0 })).toThrow()
   })
+
+  it("accepts optional show and part IDs", () => {
+    const prefs = UserPreferencesSchema.parse({ stepSizeYards: 0.75, showId: "s1", partId: "p1" })
+    expect(prefs.showId).toBe("s1")
+    expect(prefs.partId).toBe("p1")
+  })
 })
 
 describe("ParsedMusic schema", () => {
@@ -52,5 +59,16 @@ describe("ParsedMusic schema", () => {
 
   it("rejects invalid time signature", () => {
     expect(() => ParsedMusicSchema.parse({ tempo: 120, timeSignature: { beats: 0, beatValue: 4 }, measures: [] })).toThrow()
+  })
+})
+
+describe("Show and Part schemas", () => {
+  it("parses a show with parts", () => {
+    const show = ShowSchema.parse({ id: "s1", name: "Halftime", parts: [{ id: "p1", name: "Trumpet" }] })
+    expect(show.parts[0].name).toBe("Trumpet")
+  })
+
+  it("rejects part without name", () => {
+    expect(() => PartSchema.parse({ id: "p1" })).toThrow()
   })
 })

@@ -69,9 +69,6 @@ export default function RouteList() {
         if (typeof fetchRoutes === "function") {
           const refreshed = await fetchRoutes();
           setRoutes(refreshed);
-        }
-        // else, do nothing (fetchRoutes not defined)
-      }
     });
   }
 
