@@ -1,8 +1,15 @@
 import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const r = resolve(dirname(fileURLToPath(import.meta.url)));
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: {
+    alias: {
+      "@": r,
+    },
+  },
   test: {
     environment: "node",
     include: [
