@@ -45,8 +45,6 @@ export default function SettingsPanel({ shows }: Props) {
           if (pref.fieldType === "high-school" || pref.fieldType === "college") setFieldType(pref.fieldType as FieldType)
           if (pref.notationStyle === "yardline" || pref.notationStyle === "steps-off")
             setNotationStyle(pref.notationStyle as Notation)
-          if (pref.showId) setShowId(pref.showId)
-          if (pref.partId) setPartId(pref.partId)
         }
       } catch (e) { console.error("Failed to load preferences:", e); }
     })()
